@@ -4,6 +4,10 @@ const influencerState = {
   rawRows: [],
   normalizedRows: [],
   columnMap: {},
+  sort: {
+    key: "clicks",
+    direction: "desc"
+  },
   charts: {
     metric: null,
     publisher: null
@@ -67,10 +71,7 @@ const nodes = {
   presetPanel: document.getElementById("presetPanel"),
   presetFileSelect: document.getElementById("presetFileSelect"),
   loadPresetBtn: document.getElementById("loadPresetBtn"),
-  fieldStatusPanel: document.getElementById("fieldStatusPanel"),
-  fieldStatusText: document.getElementById("fieldStatusText"),
   kpiPanel: document.getElementById("kpiPanel"),
-  insightPanel: document.getElementById("insightPanel"),
   chartPanel: document.getElementById("chartPanel"),
   tablePanel: document.getElementById("tablePanel"),
   emptyState: document.getElementById("emptyState"),
@@ -84,6 +85,7 @@ const nodes = {
 
 nodes.fileInput.addEventListener("change", handleLocalFileUpload);
 nodes.loadPresetBtn.addEventListener("click", loadPresetFromManifest);
+initTableSorting();
 
 initPresetFiles();
 
@@ -209,7 +211,7 @@ function processWorkbook(workbook, fileName) {
   influencerState.columnMap = columnMap;
   influencerState.normalizedRows = normalizeRows(rows, columnMap);
 
-  renderFieldStatus(columnMap, headers);
+  updateSortHeaderState();
   renderDashboard();
   showDashboardPanels();
 }
@@ -256,23 +258,8 @@ function normalizeRows(rows, columnMap) {
   }));
 }
 
-function renderFieldStatus(columnMap) {
-  const lines = METRIC_CONFIG.map((item) => `${item.label} ← ${columnMap[item.key] || "未识别"}`);
-  const extras = EXTRA_FIELD_CONFIG.filter((item) => columnMap[item.key]).map(
-    (item) => `${item.label} ← ${columnMap[item.key]}`
-  );
-  nodes.fieldStatusText.textContent = [...lines, ...extras].join(" ｜ ");
-}
-
 function renderDashboard() {
   const totals = calculateTotals(influencerState.normalizedRows);
-  const rowCount = influencerState.normalizedRows.length;
-  const avgClicks = rowCount ? totals.clicks / rowCount : 0;
-  const avgDpv = rowCount ? totals.dpv / rowCount : 0;
-  const correlation = calculatePearson(
-    influencerState.normalizedRows.map((item) => item.clicks),
-    influencerState.normalizedRows.map((item) => item.dpv)
-  );
 
   setText("sumClicks", formatNumber(totals.clicks, 0));
   setText("sumDpv", formatNumber(totals.dpv, 0));
@@ -280,10 +267,6 @@ function renderDashboard() {
   setText("sumRevenue", formatNumber(totals.revenue, 2));
   setText("sumUnits", formatNumber(totals.units, 0));
   setText("sumBonus", formatNumber(totals.bonus, 2));
-
-  setText("avgClicks", formatNumber(avgClicks, 1));
-  setText("avgDpv", formatNumber(avgDpv, 1));
-  setText("corrClicksDpv", correlation === null ? "-" : correlation.toFixed(3));
 
   renderMetricBarChart(totals);
   renderPublisherBarChart(influencerState.normalizedRows);
@@ -332,12 +315,12 @@ function renderMetricBarChart(totals) {
           label: "汇总值",
           data,
           backgroundColor: [
-            "rgba(46, 109, 214, 0.86)",
-            "rgba(72, 142, 239, 0.86)",
-            "rgba(96, 166, 245, 0.86)",
-            "rgba(53, 192, 142, 0.86)",
-            "rgba(127, 111, 255, 0.86)",
-            "rgba(243, 167, 73, 0.86)"
+            "rgba(227, 188, 109, 0.86)",
+            "rgba(211, 168, 84, 0.86)",
+            "rgba(196, 149, 64, 0.86)",
+            "rgba(173, 128, 45, 0.86)",
+            "rgba(154, 110, 34, 0.86)",
+            "rgba(235, 202, 136, 0.86)"
           ],
           borderRadius: 8
         }
@@ -385,7 +368,7 @@ function renderPublisherBarChart(rows) {
         {
           label: "点击量",
           data: values,
-          backgroundColor: "rgba(67, 132, 232, 0.82)",
+          backgroundColor: "rgba(217, 177, 99, 0.82)",
           borderRadius: 8
         }
       ]
@@ -405,8 +388,7 @@ function renderPublisherBarChart(rows) {
 }
 
 function renderTable(rows, totals) {
-  const maxRows = 400;
-  const shownRows = rows.slice(0, maxRows);
+  const shownRows = sortRows(rows, influencerState.sort.key, influencerState.sort.direction);
   nodes.tableBody.innerHTML = shownRows
     .map(
       (row) => `
@@ -425,7 +407,8 @@ function renderTable(rows, totals) {
     )
     .join("");
 
-  nodes.tableSummary.textContent = `${influencerState.fileTitle}｜共 ${rows.length} 行，当前显示 ${shownRows.length} 行｜点击量合计 ${formatNumber(
+  const sortLabel = getSortLabel(influencerState.sort.key, influencerState.sort.direction);
+  nodes.tableSummary.textContent = `${influencerState.fileTitle}｜共 ${rows.length} 行｜当前排序：${sortLabel}｜点击量合计 ${formatNumber(
     totals.clicks,
     0
   )}`;
@@ -433,11 +416,87 @@ function renderTable(rows, totals) {
 
 function showDashboardPanels() {
   nodes.emptyState.classList.add("hidden");
-  nodes.fieldStatusPanel.classList.remove("hidden");
   nodes.kpiPanel.classList.remove("hidden");
-  nodes.insightPanel.classList.remove("hidden");
   nodes.chartPanel.classList.remove("hidden");
   nodes.tablePanel.classList.remove("hidden");
+}
+
+function initTableSorting() {
+  const sortableHeaders = document.querySelectorAll("th.sortable");
+  sortableHeaders.forEach((header) => {
+    header.addEventListener("click", () => {
+      const key = header.dataset.sortKey;
+      if (!key) {
+        return;
+      }
+      if (influencerState.sort.key === key) {
+        influencerState.sort.direction = influencerState.sort.direction === "asc" ? "desc" : "asc";
+      } else {
+        influencerState.sort.key = key;
+        influencerState.sort.direction = isNumericSortKey(key) ? "desc" : "asc";
+      }
+      updateSortHeaderState();
+      if (!influencerState.normalizedRows.length) {
+        return;
+      }
+      const totals = calculateTotals(influencerState.normalizedRows);
+      renderTable(influencerState.normalizedRows, totals);
+    });
+  });
+  updateSortHeaderState();
+}
+
+function updateSortHeaderState() {
+  const sortableHeaders = document.querySelectorAll("th.sortable");
+  sortableHeaders.forEach((header) => {
+    const key = header.dataset.sortKey;
+    const baseText = header.textContent.replace(/\s*[↑↓]$/, "");
+    if (key === influencerState.sort.key) {
+      const arrow = influencerState.sort.direction === "asc" ? "↑" : "↓";
+      header.textContent = `${baseText} ${arrow}`;
+      header.classList.add("active-sort");
+    } else {
+      header.textContent = baseText;
+      header.classList.remove("active-sort");
+    }
+  });
+}
+
+function sortRows(rows, key, direction) {
+  const cloned = rows.slice();
+  cloned.sort((a, b) => {
+    const av = a[key];
+    const bv = b[key];
+    let result = 0;
+    if (isNumericSortKey(key)) {
+      result = (Number(av) || 0) - (Number(bv) || 0);
+    } else {
+      result = String(av || "").localeCompare(String(bv || ""), "zh-CN");
+    }
+    return direction === "asc" ? result : -result;
+  });
+  return cloned;
+}
+
+function isNumericSortKey(key) {
+  return ["clicks", "dpv", "atc", "revenue", "units", "bonus"].includes(key);
+}
+
+function getSortLabel(key, direction) {
+  const dict = {
+    adGroup: "广告组",
+    channel: "Channel",
+    publisher: "出版商",
+    clicks: "点击量",
+    dpv: "总 DPV",
+    atc: "ATC 总计",
+    revenue: "购买总额",
+    units: "商品销量总计",
+    bonus: "品牌引流奖励计划"
+  };
+  const label = dict[key] || key;
+  const dirText = direction === "asc" ? "升序" : "降序";
+  return `${label}（${dirText}）`;
 }
 
 function normalizeHeader(value) {
@@ -463,34 +522,6 @@ function formatNumber(value, fractionDigits) {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits
   }).format(Number.isFinite(value) ? value : 0);
-}
-
-function calculatePearson(xs, ys) {
-  const count = Math.min(xs.length, ys.length);
-  if (count < 2) {
-    return null;
-  }
-
-  const meanX = xs.reduce((sum, value) => sum + value, 0) / count;
-  const meanY = ys.reduce((sum, value) => sum + value, 0) / count;
-
-  let numerator = 0;
-  let sumX2 = 0;
-  let sumY2 = 0;
-
-  for (let i = 0; i < count; i += 1) {
-    const dx = xs[i] - meanX;
-    const dy = ys[i] - meanY;
-    numerator += dx * dy;
-    sumX2 += dx * dx;
-    sumY2 += dy * dy;
-  }
-
-  const denominator = Math.sqrt(sumX2 * sumY2);
-  if (!denominator) {
-    return null;
-  }
-  return numerator / denominator;
 }
 
 function getFileBaseName(pathValue) {
@@ -524,3 +555,4 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
