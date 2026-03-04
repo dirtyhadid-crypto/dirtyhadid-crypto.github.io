@@ -231,8 +231,8 @@ function renderOverviewChart(rows) {
     {
       label: "总流量",
       data: rows.map((item) => item.total),
-      borderColor: "#2f5bde",
-      backgroundColor: "rgba(47, 91, 222, 0.25)",
+      borderColor: "#f0c66a",
+      backgroundColor: "rgba(240, 198, 106, 0.24)",
       fill: true,
       tension: 0.3,
       pointRadius: 2
@@ -243,8 +243,8 @@ function renderOverviewChart(rows) {
     datasets.push({
       label: "亚马逊",
       data: rows.map((item) => item.amazon),
-      borderColor: "#5e8cff",
-      backgroundColor: "rgba(94, 140, 255, 0.12)",
+      borderColor: "#d8a74f",
+      backgroundColor: "rgba(216, 167, 79, 0.14)",
       tension: 0.3,
       pointRadius: 2
     });
@@ -253,8 +253,8 @@ function renderOverviewChart(rows) {
     datasets.push({
       label: "红人",
       data: rows.map((item) => item.influencer),
-      borderColor: "#db5f8b",
-      backgroundColor: "rgba(219, 95, 139, 0.12)",
+      borderColor: "#c7923e",
+      backgroundColor: "rgba(199, 146, 62, 0.13)",
       tension: 0.3,
       pointRadius: 2
     });
@@ -263,8 +263,8 @@ function renderOverviewChart(rows) {
     datasets.push({
       label: "社媒",
       data: rows.map((item) => item.social),
-      borderColor: "#0d9bc5",
-      backgroundColor: "rgba(13, 155, 197, 0.12)",
+      borderColor: "#ae7f35",
+      backgroundColor: "rgba(174, 127, 53, 0.12)",
       tension: 0.3,
       pointRadius: 2
     });
@@ -273,8 +273,8 @@ function renderOverviewChart(rows) {
     datasets.push({
       label: "媒体",
       data: rows.map((item) => item.media),
-      borderColor: "#8a62ff",
-      backgroundColor: "rgba(138, 98, 255, 0.12)",
+      borderColor: "#8e6628",
+      backgroundColor: "rgba(142, 102, 40, 0.12)",
       tension: 0.3,
       pointRadius: 2
     });
@@ -292,11 +292,23 @@ function renderOverviewChart(rows) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { boxWidth: 10, boxHeight: 10 }
+          labels: {
+            boxWidth: 10,
+            boxHeight: 10,
+            color: "#e9c988"
+          }
         }
       },
       scales: {
-        y: { beginAtZero: true }
+        x: {
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        }
       }
     }
   });
