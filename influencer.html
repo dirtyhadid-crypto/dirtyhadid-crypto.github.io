@@ -37,14 +37,6 @@
     <main class="page-shell">
       <section class="page-header">
         <h1>红人数据总览看板</h1>
-        <p>上传红人报表后，自动汇总六项核心指标并生成柱状图对比。</p>
-      </section>
-
-      <section class="jump-grid">
-        <a class="jump-card" href="./overview.html">返回数据总览</a>
-        <a class="jump-card" href="./amazon.html">查看亚马逊流量</a>
-        <a class="jump-card" href="./social.html">查看社媒流量</a>
-        <a class="jump-card" href="./media.html">查看媒体流量</a>
       </section>
 
       <section class="panel">
@@ -64,55 +56,34 @@
               <select id="presetFileSelect"></select>
               <button id="loadPresetBtn" class="action-btn secondary" type="button">加载文件</button>
             </div>
-            <p class="panel-hint">提示：GitHub Pages 目录无法自动枚举，靠 `excel/manifest.json` 自动显示。</p>
           </article>
         </div>
       </section>
 
-      <section id="fieldStatusPanel" class="panel hidden">
-        <h2>自动字段识别结果</h2>
-        <p id="fieldStatusText" class="table-kpi"></p>
-      </section>
-
-      <section id="kpiPanel" class="stats-grid six hidden">
-        <article class="stat-card">
-          <p class="stat-title">点击量（总计）</p>
-          <p id="sumClicks" class="stat-value">-</p>
+      <section id="kpiPanel" class="summary-line hidden">
+        <article class="summary-item">
+          <p class="summary-label">点击量</p>
+          <p id="sumClicks" class="summary-value">-</p>
         </article>
-        <article class="stat-card">
-          <p class="stat-title">总 DPV（总计）</p>
-          <p id="sumDpv" class="stat-value">-</p>
+        <article class="summary-item">
+          <p class="summary-label">总 DPV</p>
+          <p id="sumDpv" class="summary-value">-</p>
         </article>
-        <article class="stat-card">
-          <p class="stat-title">ATC 总计（总计）</p>
-          <p id="sumAtc" class="stat-value">-</p>
+        <article class="summary-item">
+          <p class="summary-label">ATC 总计</p>
+          <p id="sumAtc" class="summary-value">-</p>
         </article>
-        <article class="stat-card">
-          <p class="stat-title">购买总额（总计）</p>
-          <p id="sumRevenue" class="stat-value">-</p>
+        <article class="summary-item">
+          <p class="summary-label">购买总额</p>
+          <p id="sumRevenue" class="summary-value">-</p>
         </article>
-        <article class="stat-card">
-          <p class="stat-title">商品销量总计（总计）</p>
-          <p id="sumUnits" class="stat-value">-</p>
+        <article class="summary-item">
+          <p class="summary-label">商品销量总计</p>
+          <p id="sumUnits" class="summary-value">-</p>
         </article>
-        <article class="stat-card">
-          <p class="stat-title">品牌引流奖励计划（总计）</p>
-          <p id="sumBonus" class="stat-value">-</p>
-        </article>
-      </section>
-
-      <section id="insightPanel" class="stats-grid three hidden">
-        <article class="stat-card">
-          <p class="stat-title">平均点击量/行</p>
-          <p id="avgClicks" class="stat-value">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">平均 DPV/行</p>
-          <p id="avgDpv" class="stat-value">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">点击量与DPV相关系数</p>
-          <p id="corrClicksDpv" class="stat-value">-</p>
+        <article class="summary-item">
+          <p class="summary-label">品牌引流奖励计划</p>
+          <p id="sumBonus" class="summary-value">-</p>
         </article>
       </section>
 
@@ -140,15 +111,15 @@
           <table>
             <thead>
               <tr>
-                <th>广告组</th>
-                <th>Channel</th>
-                <th>出版商</th>
-                <th>点击量</th>
-                <th>总 DPV</th>
-                <th>ATC 总计</th>
-                <th>购买总额</th>
-                <th>商品销量总计</th>
-                <th>品牌引流奖励计划</th>
+                <th class="sortable" data-sort-key="adGroup">广告组</th>
+                <th class="sortable" data-sort-key="channel">Channel</th>
+                <th class="sortable" data-sort-key="publisher">出版商</th>
+                <th class="sortable" data-sort-key="clicks">点击量</th>
+                <th class="sortable" data-sort-key="dpv">总 DPV</th>
+                <th class="sortable" data-sort-key="atc">ATC 总计</th>
+                <th class="sortable" data-sort-key="revenue">购买总额</th>
+                <th class="sortable" data-sort-key="units">商品销量总计</th>
+                <th class="sortable" data-sort-key="bonus">品牌引流奖励计划</th>
               </tr>
             </thead>
             <tbody id="influencerTableBody"></tbody>
@@ -167,3 +138,4 @@
     </script>
   </body>
 </html>
+
