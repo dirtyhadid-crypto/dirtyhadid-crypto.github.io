@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>红人流量 - 电商数据追踪看板</title>
-    <script src="./auth.js"></script>
+    <script src="./auth.js?v=20260304"></script>
     <script>
       window.requireDashboardAuth("./index.html");
     </script>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260304" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   </head>
@@ -62,28 +62,28 @@
 
       <section id="kpiPanel" class="summary-line hidden">
         <article class="summary-item">
-          <p class="summary-label">点击量</p>
-          <p id="sumClicks" class="summary-value">-</p>
+          <span class="summary-label">点击量</span>
+          <span id="sumClicks" class="summary-value">-</span>
         </article>
         <article class="summary-item">
-          <p class="summary-label">总 DPV</p>
-          <p id="sumDpv" class="summary-value">-</p>
+          <span class="summary-label">总 DPV</span>
+          <span id="sumDpv" class="summary-value">-</span>
         </article>
         <article class="summary-item">
-          <p class="summary-label">ATC 总计</p>
-          <p id="sumAtc" class="summary-value">-</p>
+          <span class="summary-label">ATC 总计</span>
+          <span id="sumAtc" class="summary-value">-</span>
         </article>
         <article class="summary-item">
-          <p class="summary-label">购买总额</p>
-          <p id="sumRevenue" class="summary-value">-</p>
+          <span class="summary-label">购买总额</span>
+          <span id="sumRevenue" class="summary-value">-</span>
         </article>
         <article class="summary-item">
-          <p class="summary-label">商品销量总计</p>
-          <p id="sumUnits" class="summary-value">-</p>
+          <span class="summary-label">商品销量总计</span>
+          <span id="sumUnits" class="summary-value">-</span>
         </article>
         <article class="summary-item">
-          <p class="summary-label">品牌引流奖励计划</p>
-          <p id="sumBonus" class="summary-value">-</p>
+          <span class="summary-label">品牌引流奖励计划</span>
+          <span id="sumBonus" class="summary-value">-</span>
         </article>
       </section>
 
@@ -132,7 +132,7 @@
       </section>
     </main>
 
-    <script src="./influencer.js"></script>
+    <script src="./influencer.js?v=20260304"></script>
     <script>
       window.bindLogoutButton("logoutBtn", "./index.html");
     </script>
