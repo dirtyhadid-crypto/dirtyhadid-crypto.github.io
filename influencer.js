@@ -333,7 +333,15 @@ function renderMetricBarChart(totals) {
         legend: { display: false }
       },
       scales: {
-        y: { beginAtZero: true }
+        x: {
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        }
       }
     }
   });
@@ -381,7 +389,15 @@ function renderPublisherBarChart(rows) {
         legend: { display: false }
       },
       scales: {
-        x: { beginAtZero: true }
+        x: {
+          beginAtZero: true,
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        },
+        y: {
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        }
       }
     }
   });
