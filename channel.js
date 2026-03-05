@@ -210,8 +210,8 @@ function renderChannelChart(rows) {
         {
           label: metricLabel,
           data: values,
-          borderColor: "#3f73ff",
-          backgroundColor: "rgba(63, 115, 255, 0.24)",
+          borderColor: "#f0c66a",
+          backgroundColor: "rgba(240, 198, 106, 0.24)",
           fill: true,
           tension: 0.3,
           pointRadius: 2
@@ -223,11 +223,23 @@ function renderChannelChart(rows) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { boxWidth: 10, boxHeight: 10 }
+          labels: {
+            boxWidth: 10,
+            boxHeight: 10,
+            color: "#e9c988"
+          }
         }
       },
       scales: {
-        y: { beginAtZero: true }
+        x: {
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#ba975f" },
+          grid: { color: "rgba(233, 191, 93, 0.12)" }
+        }
       }
     }
   });
