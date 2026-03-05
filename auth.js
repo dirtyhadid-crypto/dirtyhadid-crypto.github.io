@@ -115,3 +115,4 @@
   window.requireDashboardAuth = requireDashboardAuth;
   window.bindLogoutButton = bindLogoutButton;
 })();
+
