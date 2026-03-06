@@ -330,6 +330,10 @@ body.app-shell {
   display: none;
 }
 
+.upload-row input[type="file"] {
+  display: none;
+}
+
 .file-btn,
 .action-btn {
   border: 1px solid rgba(231, 189, 111, 0.45);
@@ -379,6 +383,10 @@ body.app-shell {
   grid-template-columns: repeat(2, minmax(190px, 1fr));
 }
 
+.mapping-grid.three-columns {
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+}
+
 .mapping-grid label {
   display: grid;
   gap: 6px;
@@ -397,6 +405,16 @@ select {
   font-size: 0.9rem;
 }
 
+.mapping-grid input[type="text"],
+.toolbar-grid input[type="text"] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  background: #0a0a0a;
+  font-size: 0.9rem;
+}
+
 .filter-row {
   display: inline-flex;
   align-items: center;
@@ -404,6 +422,26 @@ select {
   color: var(--text);
   font-weight: 700;
   font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.toolbar-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.toolbar-grid.three-columns {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.toolbar-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -453,6 +491,30 @@ select {
   margin: -2px 0 10px;
   color: var(--text-dim);
   font-size: 0.86rem;
+}
+
+.formula-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #141414 0%, #0c0c0c 100%);
+  padding: 12px 14px;
+}
+
+.formula-line {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #e9ca88;
+}
+
+.formula-line + .formula-line {
+  margin-top: 6px;
+}
+
+.formula-note {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
 }
 
 .table-wrap {
@@ -533,6 +595,11 @@ th.active-sort {
     grid-template-columns: repeat(3, minmax(130px, 1fr));
   }
 
+  .mapping-grid.three-columns,
+  .toolbar-grid.three-columns {
+    grid-template-columns: repeat(2, minmax(170px, 1fr));
+  }
+
   .jump-grid {
     grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
@@ -560,6 +627,9 @@ th.active-sort {
   .stats-grid.three,
   .mapping-grid,
   .mapping-grid.two-columns,
+  .mapping-grid.three-columns,
+  .toolbar-grid,
+  .toolbar-grid.three-columns,
   .jump-grid,
   .source-grid {
     grid-template-columns: 1fr;
@@ -577,5 +647,3 @@ th.active-sort {
     height: 290px;
   }
 }
-
-
