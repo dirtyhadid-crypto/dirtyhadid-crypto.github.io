@@ -49,6 +49,11 @@
               <input id="amazonFileInput" type="file" accept=".xlsx,.xls,.csv" />
               <p id="amazonFileName" class="file-name">还没有上传文件</p>
             </div>
+            <div id="amazonPresetPanel" class="source-select-row hidden">
+              <select id="amazonPresetFileSelect"></select>
+              <button id="loadAmazonPresetBtn" class="action-btn secondary" type="button">仓库一键加载</button>
+            </div>
+            <p id="amazonUploadStatus" class="panel-hint">上传后自动识别并生成看板。</p>
           </article>
           <article class="source-card">
             <p class="source-title">红人DPV数据</p>
@@ -57,6 +62,11 @@
               <input id="influencerFileInput" type="file" accept=".xlsx,.xls,.csv" />
               <p id="influencerFileName" class="file-name">还没有上传文件</p>
             </div>
+            <div id="influencerPresetPanel" class="source-select-row hidden">
+              <select id="influencerPresetFileSelect"></select>
+              <button id="loadInfluencerPresetBtn" class="action-btn secondary" type="button">仓库一键加载</button>
+            </div>
+            <p id="influencerUploadStatus" class="panel-hint">上传后自动识别并生成看板。</p>
           </article>
         </div>
         <p class="panel-hint">
@@ -157,6 +167,18 @@
           <span class="summary-label">红人指标总和</span>
           <span id="kpiDpvSum" class="summary-value">-</span>
         </article>
+        <article class="summary-item">
+          <span class="summary-label">回归斜率β</span>
+          <span id="kpiSlope" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">回归截距α</span>
+          <span id="kpiIntercept" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">R²(log)</span>
+          <span id="kpiR2" class="summary-value">-</span>
+        </article>
       </section>
 
       <section id="formulaPanel" class="panel hidden">
@@ -164,6 +186,7 @@
         <div class="formula-card">
           <p class="formula-line">r = corr(X_t, Y_t)</p>
           <p class="formula-line">r_log = corr(log(1 + X_t), log(1 + Y_t))</p>
+          <p id="regressionEquation" class="formula-line">log(1 + Y_t) = α + β · log(1 + X_t)</p>
           <p class="formula-note">
             其中 X_t 为红人当日指标（可选 DPV 或销量），Y_t 为选中 ASIN 当日销量；日期缺失按 0 处理后进行同日对齐。当前页面先用相关性监控，Ridge/ElasticNet 可作为下一步扩展。
           </p>
@@ -211,7 +234,7 @@
       </section>
     </main>
 
-    <script src="./overview.js?v=20260305"></script>
+    <script src="./overview.js?v=20260307"></script>
     <script>
       window.bindLogoutButton("logoutBtn", "./index.html");
     </script>
