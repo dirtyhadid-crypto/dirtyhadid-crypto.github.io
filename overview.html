@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>数据总览 - 电商数据追踪看板</title>
-    <script src="./auth.js?v=20260304"></script>
+    <title>数据总览 - 红人与ASIN相关性</title>
+    <script src="./auth.js?v=20260305"></script>
     <script>
       window.requireDashboardAuth("./index.html");
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260304" />
+    <link rel="stylesheet" href="./styles.css?v=20260305" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   </head>
@@ -36,128 +36,184 @@
 
     <main class="page-shell">
       <section class="page-header">
-        <h1>数据总览</h1>
-        <p>上传包含多渠道流量的 Excel，快速查看总流量、趋势和每日明细。</p>
-      </section>
-
-      <section class="jump-grid">
-        <a class="jump-card" href="./amazon.html">亚马逊流量浮动</a>
-        <a class="jump-card" href="./influencer.html">红人流量分析</a>
-        <a class="jump-card" href="./social.html">社媒流量变化</a>
-        <a class="jump-card" href="./media.html">媒体流量看板</a>
-      </section>
-
-      <section id="kpiPanel" class="stats-grid hidden">
-        <article class="stat-card">
-          <p class="stat-title">总流量（最新）</p>
-          <p id="kpiTotalValue" class="stat-value">-</p>
-          <p id="kpiTotalChange" class="stat-note">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">亚马逊（最新）</p>
-          <p id="kpiAmazonValue" class="stat-value">-</p>
-          <p id="kpiAmazonChange" class="stat-note">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">红人（最新）</p>
-          <p id="kpiInfluencerValue" class="stat-value">-</p>
-          <p id="kpiInfluencerChange" class="stat-note">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">社媒（最新）</p>
-          <p id="kpiSocialValue" class="stat-value">-</p>
-          <p id="kpiSocialChange" class="stat-note">-</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-title">媒体（最新）</p>
-          <p id="kpiMediaValue" class="stat-value">-</p>
-          <p id="kpiMediaChange" class="stat-note">-</p>
-        </article>
+        <h1>红人DPV与ASIN销量相关性</h1>
       </section>
 
       <section class="panel">
-        <div class="upload-row">
-          <label class="file-btn" for="fileInput">上传总览数据</label>
-          <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
-          <p id="fileName" class="file-name">还没有上传文件</p>
+        <h2>数据来源</h2>
+        <div class="source-grid">
+          <article class="source-card">
+            <p class="source-title">Amazon 销售数据</p>
+            <div class="upload-row">
+              <label class="file-btn" for="amazonFileInput">上传Amazon文件</label>
+              <input id="amazonFileInput" type="file" accept=".xlsx,.xls,.csv" />
+              <p id="amazonFileName" class="file-name">还没有上传文件</p>
+            </div>
+          </article>
+          <article class="source-card">
+            <p class="source-title">红人DPV数据</p>
+            <div class="upload-row">
+              <label class="file-btn" for="influencerFileInput">上传红人文件</label>
+              <input id="influencerFileInput" type="file" accept=".xlsx,.xls,.csv" />
+              <p id="influencerFileName" class="file-name">还没有上传文件</p>
+            </div>
+          </article>
         </div>
-        <p class="panel-hint">建议列名：日期、亚马逊流量、红人流量、社媒流量、媒体流量。</p>
+        <p class="panel-hint">
+          相关性按“日期”对齐，默认缺失值按 0 处理。支持筛选单个 ASIN 与单个红人。
+        </p>
       </section>
 
-      <section id="mappingPanel" class="panel hidden">
-        <h2>字段映射</h2>
-        <div class="mapping-grid">
+      <section id="amazonMappingPanel" class="panel hidden">
+        <h2>Amazon 字段映射</h2>
+        <div class="mapping-grid three-columns">
           <label>
-            日期列
-            <select id="dateColumn"></select>
+            日期列（必填）
+            <select id="amazonDateColumn"></select>
           </label>
           <label>
-            亚马逊流量列
-            <select id="amazonColumn"></select>
+            ASIN列（可选）
+            <select id="amazonAsinColumn"></select>
           </label>
           <label>
-            红人流量列
-            <select id="influencerColumn"></select>
+            销量列（必填）
+            <select id="amazonSalesColumn"></select>
           </label>
           <label>
-            社媒流量列
-            <select id="socialColumn"></select>
-          </label>
-          <label>
-            媒体流量列
-            <select id="mediaColumn"></select>
+            单ASIN文件标识（可选）
+            <input id="amazonAsinFallback" type="text" placeholder="如 B0G69M52V4，不填则尝试从文件名识别" />
           </label>
         </div>
-        <button id="applyMappingBtn" class="action-btn">应用映射并生成看板</button>
+        <button id="applyAmazonMappingBtn" class="action-btn">应用 Amazon 映射</button>
+      </section>
+
+      <section id="influencerMappingPanel" class="panel hidden">
+        <h2>红人字段映射</h2>
+        <div class="mapping-grid three-columns">
+          <label>
+            日期列（必填）
+            <select id="influencerDateColumn"></select>
+          </label>
+          <label>
+            红人列（可选）
+            <select id="influencerNameColumn"></select>
+          </label>
+          <label>
+            红人指标列（DPV/销量，必填）
+            <select id="influencerDpvColumn"></select>
+          </label>
+        </div>
+        <button id="applyInfluencerMappingBtn" class="action-btn">应用红人映射</button>
       </section>
 
       <section id="filterPanel" class="panel hidden">
-        <div class="filter-row">
-          <label for="rangeSelect">展示范围</label>
-          <select id="rangeSelect">
-            <option value="all">全部</option>
-            <option value="30" selected>最近30天</option>
-            <option value="14">最近14天</option>
-            <option value="7">最近7天</option>
-          </select>
+        <div class="toolbar-grid three-columns">
+          <label>
+            ASIN筛选
+            <select id="asinFilter"></select>
+          </label>
+          <label>
+            红人筛选
+            <select id="influencerFilter"></select>
+          </label>
+          <label>
+            展示范围
+            <select id="rangeSelect">
+              <option value="all">全部</option>
+              <option value="30" selected>最近30天</option>
+              <option value="14">最近14天</option>
+              <option value="7">最近7天</option>
+            </select>
+          </label>
         </div>
       </section>
 
-      <section id="chartPanel" class="panel hidden">
-        <h2>流量趋势折线图</h2>
-        <div class="chart-wrap">
-          <canvas id="overviewChart"></canvas>
+      <section id="kpiPanel" class="summary-line hidden">
+        <article class="summary-item">
+          <span class="summary-label">选中ASIN</span>
+          <span id="kpiAsin" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">选中红人</span>
+          <span id="kpiInfluencer" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">Pearson相关系数</span>
+          <span id="kpiCorrRaw" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">Log相关系数</span>
+          <span id="kpiCorrLog" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">对齐天数</span>
+          <span id="kpiDays" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">销量总和</span>
+          <span id="kpiSalesSum" class="summary-value">-</span>
+        </article>
+        <article class="summary-item">
+          <span class="summary-label">红人指标总和</span>
+          <span id="kpiDpvSum" class="summary-value">-</span>
+        </article>
+      </section>
+
+      <section id="formulaPanel" class="panel hidden">
+        <h2>相关性计算公式</h2>
+        <div class="formula-card">
+          <p class="formula-line">r = corr(X_t, Y_t)</p>
+          <p class="formula-line">r_log = corr(log(1 + X_t), log(1 + Y_t))</p>
+          <p class="formula-note">
+            其中 X_t 为红人当日指标（可选 DPV 或销量），Y_t 为选中 ASIN 当日销量；日期缺失按 0 处理后进行同日对齐。当前页面先用相关性监控，Ridge/ElasticNet 可作为下一步扩展。
+          </p>
         </div>
+      </section>
+
+      <section id="chartPanel" class="source-grid hidden">
+        <article class="panel">
+          <h2 id="trendChartTitle">同日期 DPV 与销量对比</h2>
+          <p id="trendChartNote" class="chart-title-note">等待加载数据</p>
+          <div class="chart-wrap">
+            <canvas id="correlationTrendChart"></canvas>
+          </div>
+        </article>
+        <article class="panel">
+          <h2 id="scatterChartTitle">Log 空间散点图</h2>
+          <p id="scatterChartNote" class="chart-title-note">等待加载数据</p>
+          <div class="chart-wrap">
+            <canvas id="correlationScatterChart"></canvas>
+          </div>
+        </article>
       </section>
 
       <section id="tablePanel" class="panel hidden">
-        <h2>每日数据表</h2>
+        <h2>按日期对齐明细</h2>
+        <p id="correlationTableSummary" class="table-kpi"></p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>日期</th>
-                <th>总流量</th>
-                <th>亚马逊</th>
-                <th>红人</th>
-                <th>社媒</th>
-                <th>媒体</th>
+                <th>ASIN销量</th>
+                <th id="metricHeaderLabel">红人指标</th>
+                <th>log(1+销量)</th>
+                <th id="metricLogHeaderLabel">log(1+红人指标)</th>
               </tr>
             </thead>
-            <tbody id="overviewTableBody"></tbody>
+            <tbody id="correlationTableBody"></tbody>
           </table>
         </div>
       </section>
 
       <section id="emptyState" class="panel empty-state">
-        上传数据并完成字段映射后，这里会显示图表和明细表。
+        请分别上传 Amazon 销售数据与红人指标数据并完成字段映射，系统将自动计算相关性并生成图表。
       </section>
     </main>
 
-    <script src="./overview.js?v=20260304"></script>
+    <script src="./overview.js?v=20260305"></script>
     <script>
       window.bindLogoutButton("logoutBtn", "./index.html");
     </script>
   </body>
 </html>
-
