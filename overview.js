@@ -24,8 +24,17 @@ const overviewState = {
 const overviewNodes = {
   amazonFileInput: document.getElementById("amazonFileInput"),
   amazonFileName: document.getElementById("amazonFileName"),
+  amazonPresetPanel: document.getElementById("amazonPresetPanel"),
+  amazonPresetFileSelect: document.getElementById("amazonPresetFileSelect"),
+  loadAmazonPresetBtn: document.getElementById("loadAmazonPresetBtn"),
+  amazonUploadStatus: document.getElementById("amazonUploadStatus"),
+
   influencerFileInput: document.getElementById("influencerFileInput"),
   influencerFileName: document.getElementById("influencerFileName"),
+  influencerPresetPanel: document.getElementById("influencerPresetPanel"),
+  influencerPresetFileSelect: document.getElementById("influencerPresetFileSelect"),
+  loadInfluencerPresetBtn: document.getElementById("loadInfluencerPresetBtn"),
+  influencerUploadStatus: document.getElementById("influencerUploadStatus"),
 
   amazonMappingPanel: document.getElementById("amazonMappingPanel"),
   influencerMappingPanel: document.getElementById("influencerMappingPanel"),
@@ -57,6 +66,7 @@ const overviewNodes = {
   trendChartNote: document.getElementById("trendChartNote"),
   scatterChartTitle: document.getElementById("scatterChartTitle"),
   scatterChartNote: document.getElementById("scatterChartNote"),
+  regressionEquation: document.getElementById("regressionEquation"),
   metricHeaderLabel: document.getElementById("metricHeaderLabel"),
   metricLogHeaderLabel: document.getElementById("metricLogHeaderLabel"),
 
@@ -76,56 +86,170 @@ const INFLUENCER_KEYWORDS = {
   dpv: ["销量", "总销量", "销售量", "dpv", "总dpv", "总 dpv", "访问", "流量", "purchase", "购买次数"]
 };
 
-overviewNodes.amazonFileInput.addEventListener("change", (event) => handleDataFileUpload("amazon", event));
-overviewNodes.influencerFileInput.addEventListener("change", (event) => handleDataFileUpload("influencer", event));
-overviewNodes.applyAmazonMappingBtn.addEventListener("click", applyAmazonMapping);
-overviewNodes.applyInfluencerMappingBtn.addEventListener("click", applyInfluencerMapping);
-overviewNodes.asinFilter.addEventListener("change", renderCorrelationDashboard);
-overviewNodes.influencerFilter.addEventListener("change", renderCorrelationDashboard);
-overviewNodes.rangeSelect.addEventListener("change", renderCorrelationDashboard);
+bindIfPresent(overviewNodes.amazonFileInput, "click", clearFileInputValue);
+bindIfPresent(overviewNodes.influencerFileInput, "click", clearFileInputValue);
+bindIfPresent(overviewNodes.amazonFileInput, "change", (event) => handleDataFileUpload("amazon", event));
+bindIfPresent(overviewNodes.influencerFileInput, "change", (event) => handleDataFileUpload("influencer", event));
+bindIfPresent(overviewNodes.loadAmazonPresetBtn, "click", () => loadPresetFile("amazon"));
+bindIfPresent(overviewNodes.loadInfluencerPresetBtn, "click", () => loadPresetFile("influencer"));
+bindIfPresent(overviewNodes.applyAmazonMappingBtn, "click", applyAmazonMapping);
+bindIfPresent(overviewNodes.applyInfluencerMappingBtn, "click", applyInfluencerMapping);
+bindIfPresent(overviewNodes.asinFilter, "change", renderCorrelationDashboard);
+bindIfPresent(overviewNodes.influencerFilter, "change", renderCorrelationDashboard);
+bindIfPresent(overviewNodes.rangeSelect, "change", renderCorrelationDashboard);
+
+initPresetFiles();
+
+async function initPresetFiles() {
+  try {
+    const response = await fetch("./excel/manifest.json", { cache: "no-store" });
+    if (!response.ok) {
+      return;
+    }
+
+    const files = await parseManifestResponse(response);
+    if (!files.length) {
+      return;
+    }
+
+    fillPresetSelect("amazon", filterPresetFiles(files, "amazon"));
+    fillPresetSelect("influencer", filterPresetFiles(files, "influencer"));
+  } catch (_) {
+    // Ignore in static environments.
+  }
+}
+
+function fillPresetSelect(type, files) {
+  const panel = type === "amazon" ? overviewNodes.amazonPresetPanel : overviewNodes.influencerPresetPanel;
+  const selectNode = type === "amazon" ? overviewNodes.amazonPresetFileSelect : overviewNodes.influencerPresetFileSelect;
+  if (!panel || !selectNode || !files.length) {
+    return;
+  }
+
+  selectNode.innerHTML = "";
+  files.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.path;
+    option.textContent = item.name;
+    selectNode.appendChild(option);
+  });
+  panel.classList.remove("hidden");
+}
+
+function filterPresetFiles(files, type) {
+  const amazonKeywords = ["amazon", "asin", "销量"];
+  const influencerKeywords = ["红人", "influencer", "dpv", "publisher"];
+  const keywords = type === "amazon" ? amazonKeywords : influencerKeywords;
+
+  const filtered = files.filter((item) => {
+    const text = `${item.name} ${item.path}`.toLowerCase();
+    return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+  });
+
+  return filtered.length ? filtered : files;
+}
+
+async function loadPresetFile(type) {
+  if (typeof window.XLSX === "undefined") {
+    setUploadStatus(type, "Excel 解析库加载失败，请刷新页面后重试。", true);
+    return;
+  }
+
+  const selectNode = type === "amazon" ? overviewNodes.amazonPresetFileSelect : overviewNodes.influencerPresetFileSelect;
+  const fileNameNode = type === "amazon" ? overviewNodes.amazonFileName : overviewNodes.influencerFileName;
+  const filePath = selectNode?.value || "";
+  if (!filePath) {
+    return;
+  }
+
+  setUploadStatus(type, "正在加载仓库文件...");
+
+  try {
+    const response = await fetch(filePath, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("读取仓库文件失败");
+    }
+
+    const fileName = getFileBaseName(filePath);
+    if (fileNameNode) {
+      fileNameNode.textContent = `已加载仓库文件: ${fileName}`;
+    }
+
+    const workbook = await readWorkbookFromResponse(response, filePath);
+    processUploadedWorkbook(type, workbook, fileName);
+  } catch (error) {
+    setUploadStatus(type, `加载失败：${error.message}`, true);
+    window.alert(`加载失败：${error.message}`);
+  }
+}
 
 function handleDataFileUpload(type, event) {
+  if (typeof window.XLSX === "undefined") {
+    setUploadStatus(type, "Excel 解析库加载失败，请刷新页面后重试。", true);
+    window.alert("Excel 解析库加载失败，请刷新页面后重试。");
+    return;
+  }
+
   const file = event.target.files?.[0];
   if (!file) {
     return;
   }
 
   const fileNameNode = type === "amazon" ? overviewNodes.amazonFileName : overviewNodes.influencerFileName;
-  fileNameNode.textContent = `已上传: ${file.name}`;
+  if (fileNameNode) {
+    fileNameNode.textContent = `已上传: ${file.name}`;
+  }
+  setUploadStatus(type, "正在读取文件...");
 
   const reader = new FileReader();
   reader.onload = function onload(e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const parsed = parseSheetRows(sheet);
-      const rows = parsed.rows;
-
-      if (!rows.length) {
-        throw new Error("文件没有数据");
-      }
-
-      const stateSection = overviewState[type];
-      stateSection.fileTitle = stripFileExtension(file.name);
-      stateSection.rawRows = rows;
-      stateSection.headers = parsed.headers;
-
-      if (type === "amazon") {
-        initAmazonSelectors(stateSection.headers);
-        overviewNodes.amazonMappingPanel.classList.remove("hidden");
-      } else {
-        initInfluencerSelectors(stateSection.headers);
-        overviewNodes.influencerMappingPanel.classList.remove("hidden");
-      }
-
-      showSetupState();
+      processUploadedWorkbook(type, workbook, file.name);
     } catch (error) {
+      setUploadStatus(type, `读取失败：${error.message}`, true);
       window.alert(`读取失败：${error.message}`);
     }
   };
 
   reader.readAsArrayBuffer(file);
+}
+
+function processUploadedWorkbook(type, workbook, fileName) {
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const parsed = parseSheetRows(sheet);
+  const rows = parsed.rows;
+
+  if (!rows.length) {
+    throw new Error("文件没有数据");
+  }
+
+  const stateSection = overviewState[type];
+  stateSection.fileTitle = stripFileExtension(fileName);
+  stateSection.rawRows = rows;
+  stateSection.headers = parsed.headers;
+
+  if (type === "amazon") {
+    initAmazonSelectors(stateSection.headers);
+    overviewNodes.amazonMappingPanel.classList.remove("hidden");
+    if (tryAutoApplyAmazonMapping()) {
+      setUploadStatus(type, `已自动生成看板：${rows.length} 行数据。`);
+    } else {
+      setUploadStatus(type, `已读取 ${rows.length} 行，请检查映射后点击“应用 Amazon 映射”。`);
+      showSetupState();
+    }
+    return;
+  }
+
+  initInfluencerSelectors(stateSection.headers);
+  overviewNodes.influencerMappingPanel.classList.remove("hidden");
+  if (tryAutoApplyInfluencerMapping()) {
+    setUploadStatus(type, `已自动生成看板：${rows.length} 行数据。`);
+  } else {
+    setUploadStatus(type, `已读取 ${rows.length} 行，请检查映射后点击“应用红人映射”。`);
+    showSetupState();
+  }
 }
 
 function initAmazonSelectors(headers) {
@@ -179,51 +303,96 @@ function guessHeader(headers, keywords) {
 }
 
 function applyAmazonMapping() {
-  const mapping = {
-    date: overviewNodes.amazonDateColumn.value,
-    asin: overviewNodes.amazonAsinColumn.value,
-    sales: overviewNodes.amazonSalesColumn.value,
-    asinFallback: String(overviewNodes.amazonAsinFallback.value || "").trim() || extractAsinFromText(overviewState.amazon.fileTitle) || "单ASIN"
+  applyAmazonMappingInternal(getAmazonMappingFromSelectors(), { showAlert: true, source: "manual" });
+}
+
+function tryAutoApplyAmazonMapping() {
+  return applyAmazonMappingInternal(getAmazonMappingFromSelectors(), { showAlert: false, source: "auto" });
+}
+
+function getAmazonMappingFromSelectors() {
+  return {
+    date: overviewNodes.amazonDateColumn?.value || "",
+    asin: overviewNodes.amazonAsinColumn?.value || "",
+    sales: overviewNodes.amazonSalesColumn?.value || "",
+    asinFallback:
+      String(overviewNodes.amazonAsinFallback?.value || "").trim() || extractAsinFromText(overviewState.amazon.fileTitle) || "单ASIN"
   };
+}
+
+function applyAmazonMappingInternal(mapping, options) {
+  const showAlert = options?.showAlert ?? true;
+  const source = options?.source || "manual";
 
   if (!mapping.date || !mapping.sales) {
-    window.alert("请完成 Amazon 的日期列、销量列映射。ASIN列可留空。");
-    return;
+    if (showAlert) {
+      window.alert("请完成 Amazon 的日期列、销量列映射。ASIN列可留空。");
+    }
+    return false;
   }
 
   const rows = normalizeAmazonRows(overviewState.amazon.rawRows, mapping);
   if (!rows.length) {
-    window.alert("Amazon 数据未解析到有效记录，请检查映射。");
-    return;
+    if (showAlert) {
+      window.alert("Amazon 数据未解析到有效记录，请检查映射。");
+    }
+    return false;
   }
 
   overviewState.amazon.mapping = mapping;
   overviewState.amazon.rows = rows;
   tryRenderCorrelation();
+
+  if (source === "manual") {
+    setUploadStatus("amazon", `看板已更新：${rows.length} 条有效记录。`);
+  }
+  return true;
 }
 
 function applyInfluencerMapping() {
-  const mapping = {
-    date: overviewNodes.influencerDateColumn.value,
-    name: overviewNodes.influencerNameColumn.value,
-    dpv: overviewNodes.influencerDpvColumn.value
+  applyInfluencerMappingInternal(getInfluencerMappingFromSelectors(), { showAlert: true, source: "manual" });
+}
+
+function tryAutoApplyInfluencerMapping() {
+  return applyInfluencerMappingInternal(getInfluencerMappingFromSelectors(), { showAlert: false, source: "auto" });
+}
+
+function getInfluencerMappingFromSelectors() {
+  return {
+    date: overviewNodes.influencerDateColumn?.value || "",
+    name: overviewNodes.influencerNameColumn?.value || "",
+    dpv: overviewNodes.influencerDpvColumn?.value || ""
   };
+}
+
+function applyInfluencerMappingInternal(mapping, options) {
+  const showAlert = options?.showAlert ?? true;
+  const source = options?.source || "manual";
 
   if (!mapping.date || !mapping.dpv) {
-    window.alert("请完成红人的日期列与指标列映射。");
-    return;
+    if (showAlert) {
+      window.alert("请完成红人的日期列与指标列映射。");
+    }
+    return false;
   }
 
   const rows = normalizeInfluencerRows(overviewState.influencer.rawRows, mapping);
   if (!rows.length) {
-    window.alert("红人数据未解析到有效记录，请检查映射。");
-    return;
+    if (showAlert) {
+      window.alert("红人数据未解析到有效记录，请检查映射。");
+    }
+    return false;
   }
 
   overviewState.influencer.mapping = mapping;
   overviewState.influencer.metricLabel = mapping.dpv || "红人指标";
   overviewState.influencer.rows = rows;
   tryRenderCorrelation();
+
+  if (source === "manual") {
+    setUploadStatus("influencer", `看板已更新：${rows.length} 条有效记录。`);
+  }
+  return true;
 }
 
 function normalizeAmazonRows(rows, mapping) {
@@ -332,14 +501,21 @@ function renderCorrelationDashboard() {
   const dpvList = mergedRows.map((row) => row.dpv);
   const logSalesList = mergedRows.map((row) => row.logSales);
   const logDpvList = mergedRows.map((row) => row.logDpv);
+  const regression = computeLinearRegression(
+    mergedRows.map((row) => ({
+      x: row.logDpv,
+      y: row.logSales
+    }))
+  );
 
   const corrRaw = computePearson(dpvList, salesList);
   const corrLog = computePearson(logDpvList, logSalesList);
 
-  renderKpiLine({ mergedRows, corrRaw, corrLog, asinLabel, influencerLabel });
-  renderTrendChart(mergedRows, asinLabel, influencerLabel, metricLabel);
-  renderScatterChart(mergedRows, asinLabel, influencerLabel, metricLabel);
-  renderTable(mergedRows, asinLabel, influencerLabel, corrRaw, corrLog, metricLabel);
+  renderKpiLine({ mergedRows, corrRaw, corrLog, asinLabel, influencerLabel, regression });
+  renderRegressionEquation(regression, metricLabel);
+  renderTrendChart(mergedRows, asinLabel, influencerLabel, metricLabel, regression);
+  renderScatterChart(mergedRows, asinLabel, influencerLabel, metricLabel, regression);
+  renderTable(mergedRows, asinLabel, influencerLabel, corrRaw, corrLog, metricLabel, regression);
 }
 
 function buildMergedRows() {
@@ -411,7 +587,7 @@ function getInfluencerLabel() {
 }
 
 function renderKpiLine(payload) {
-  const { mergedRows, corrRaw, corrLog, asinLabel, influencerLabel } = payload;
+  const { mergedRows, corrRaw, corrLog, asinLabel, influencerLabel, regression } = payload;
   const salesSum = mergedRows.reduce((sum, row) => sum + row.sales, 0);
   const dpvSum = mergedRows.reduce((sum, row) => sum + row.dpv, 0);
 
@@ -422,6 +598,9 @@ function renderKpiLine(payload) {
   setText("kpiDays", `${mergedRows.length} 天`);
   setText("kpiSalesSum", formatNumber(salesSum, 0));
   setText("kpiDpvSum", formatNumber(dpvSum, 0));
+  setText("kpiSlope", regression ? formatNumber(regression.slope, 4) : "-");
+  setText("kpiIntercept", regression ? formatNumber(regression.intercept, 4) : "-");
+  setText("kpiR2", regression && Number.isFinite(regression.r2) ? formatNumber(regression.r2, 4) : "-");
 }
 
 function setKpiFallback() {
@@ -432,9 +611,27 @@ function setKpiFallback() {
   setText("kpiDays", "0 天");
   setText("kpiSalesSum", "0");
   setText("kpiDpvSum", "0");
+  setText("kpiSlope", "-");
+  setText("kpiIntercept", "-");
+  setText("kpiR2", "-");
+  renderRegressionEquation(null, overviewState.influencer.metricLabel || "红人指标");
 }
 
-function renderTrendChart(rows, asinLabel, influencerLabel, metricLabel) {
+function renderRegressionEquation(regression, metricLabel) {
+  if (!overviewNodes.regressionEquation) {
+    return;
+  }
+  if (!regression) {
+    overviewNodes.regressionEquation.textContent = "log(1 + Y_t) = α + β · log(1 + X_t)";
+    return;
+  }
+  overviewNodes.regressionEquation.textContent = `log(1 + 销量) = ${formatNumber(regression.intercept, 4)} + ${formatNumber(
+    regression.slope,
+    4
+  )} · log(1 + ${metricLabel})`;
+}
+
+function renderTrendChart(rows, asinLabel, influencerLabel, metricLabel, regression) {
   if (overviewState.charts.trend) {
     overviewState.charts.trend.destroy();
   }
@@ -442,32 +639,53 @@ function renderTrendChart(rows, asinLabel, influencerLabel, metricLabel) {
   overviewNodes.trendChartTitle.textContent = `${asinLabel} 销量 vs ${influencerLabel} ${metricLabel}`;
   overviewNodes.trendChartNote.textContent = `同日期对齐，共 ${rows.length} 天`;
 
+  if (typeof window.Chart !== "function") {
+    overviewNodes.trendChartNote.textContent = "图表库加载失败，仅展示顶部数据与明细。";
+    return;
+  }
+
+  const datasets = [
+    {
+      label: "ASIN销量",
+      data: rows.map((row) => row.sales),
+      borderColor: "#f0c66a",
+      backgroundColor: "rgba(240, 198, 106, 0.22)",
+      yAxisID: "ySales",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 2
+    },
+    {
+      label: metricLabel,
+      data: rows.map((row) => row.dpv),
+      borderColor: "#bf8d35",
+      backgroundColor: "rgba(191, 141, 53, 0.16)",
+      yAxisID: "yDpv",
+      fill: false,
+      tension: 0.3,
+      pointRadius: 2
+    }
+  ];
+
+  if (regression) {
+    datasets.push({
+      label: "拟合销量",
+      data: rows.map((row) => Math.max(0, Math.expm1(regression.intercept + regression.slope * row.logDpv))),
+      borderColor: "#7b5a26",
+      backgroundColor: "rgba(123, 90, 38, 0.14)",
+      yAxisID: "ySales",
+      fill: false,
+      tension: 0.2,
+      pointRadius: 0,
+      borderWidth: 2
+    });
+  }
+
   overviewState.charts.trend = new Chart(document.getElementById("correlationTrendChart"), {
     type: "line",
     data: {
       labels: rows.map((row) => row.date),
-      datasets: [
-        {
-          label: "ASIN销量",
-          data: rows.map((row) => row.sales),
-          borderColor: "#f0c66a",
-          backgroundColor: "rgba(240, 198, 106, 0.22)",
-          yAxisID: "ySales",
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2
-        },
-        {
-          label: metricLabel,
-          data: rows.map((row) => row.dpv),
-          borderColor: "#bf8d35",
-          backgroundColor: "rgba(191, 141, 53, 0.16)",
-          yAxisID: "yDpv",
-          fill: false,
-          tension: 0.3,
-          pointRadius: 2
-        }
-      ]
+      datasets
     },
     options: {
       responsive: true,
@@ -505,13 +723,17 @@ function renderTrendChart(rows, asinLabel, influencerLabel, metricLabel) {
   });
 }
 
-function renderScatterChart(rows, asinLabel, influencerLabel, metricLabel) {
+function renderScatterChart(rows, asinLabel, influencerLabel, metricLabel, regression) {
   if (overviewState.charts.scatter) {
     overviewState.charts.scatter.destroy();
   }
 
   const points = rows.map((row) => ({ x: row.logDpv, y: row.logSales }));
-  const regression = computeLinearRegression(points);
+  if (typeof window.Chart !== "function") {
+    overviewNodes.scatterChartTitle.textContent = `log(1+${metricLabel}) 与 log(1+销量) 散点`;
+    overviewNodes.scatterChartNote.textContent = "图表库加载失败，仅展示顶部数据与明细。";
+    return;
+  }
 
   const datasets = [
     {
@@ -607,10 +829,18 @@ function computeLinearRegression(points) {
 
   const slope = numerator / denominator;
   const intercept = meanY - slope * meanX;
-  return { slope, intercept };
+  let ssRes = 0;
+  let ssTot = 0;
+  points.forEach((point) => {
+    const yHat = intercept + slope * point.x;
+    ssRes += (point.y - yHat) ** 2;
+    ssTot += (point.y - meanY) ** 2;
+  });
+  const r2 = ssTot === 0 ? NaN : 1 - ssRes / ssTot;
+  return { slope, intercept, r2 };
 }
 
-function renderTable(rows, asinLabel, influencerLabel, corrRaw, corrLog, metricLabel) {
+function renderTable(rows, asinLabel, influencerLabel, corrRaw, corrLog, metricLabel, regression) {
   overviewNodes.metricHeaderLabel.textContent = metricLabel;
   overviewNodes.metricLogHeaderLabel.textContent = `log(1+${metricLabel})`;
   overviewNodes.tableBody.innerHTML = rows
@@ -631,7 +861,9 @@ function renderTable(rows, asinLabel, influencerLabel, corrRaw, corrLog, metricL
 
   overviewNodes.tableSummary.textContent = `${asinLabel} × ${influencerLabel}(${metricLabel})｜对齐 ${rows.length} 天｜相关系数 ${formatCorrelation(
     corrRaw
-  )}｜log相关系数 ${formatCorrelation(corrLog)}`;
+  )}｜log相关系数 ${formatCorrelation(corrLog)}｜β ${regression ? formatNumber(regression.slope, 4) : "-"}｜α ${
+    regression ? formatNumber(regression.intercept, 4) : "-"
+  }`;
 }
 
 function computePearson(xList, yList) {
@@ -841,4 +1073,146 @@ function sanitizeHeaders(row) {
     used.add(name);
     return name;
   });
+}
+
+async function parseManifestResponse(response) {
+  const text = await response.text();
+  return parseManifestText(text);
+}
+
+function parseManifestText(text) {
+  const source = String(text || "").trim();
+  if (!source) {
+    return [];
+  }
+
+  try {
+    return normalizeManifestFiles(JSON.parse(source));
+  } catch (_) {
+    const chunks = extractJsonObjects(source);
+    const merged = [];
+    chunks.forEach((chunk) => {
+      try {
+        merged.push(...normalizeManifestFiles(JSON.parse(chunk)));
+      } catch (_) {
+        // Ignore malformed chunks.
+      }
+    });
+    return dedupeManifestFiles(merged);
+  }
+}
+
+function extractJsonObjects(text) {
+  const parts = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (char === "\"") {
+      inString = !inString;
+      continue;
+    }
+    if (inString) {
+      continue;
+    }
+
+    if (char === "{") {
+      if (depth === 0) {
+        start = i;
+      }
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        parts.push(text.slice(start, i + 1));
+        start = -1;
+      }
+    }
+  }
+
+  return parts;
+}
+
+function normalizeManifestFiles(manifest) {
+  const source = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.files) ? manifest.files : [];
+  const files = source
+    .map((item) => {
+      if (typeof item === "string") {
+        return {
+          name: getFileBaseName(item),
+          path: item
+        };
+      }
+      return {
+        name: item?.name || getFileBaseName(item?.path || ""),
+        path: item?.path || ""
+      };
+    })
+    .filter((item) => item.path);
+
+  return dedupeManifestFiles(files);
+}
+
+function dedupeManifestFiles(files) {
+  const map = new Map();
+  files.forEach((item) => {
+    if (!item.path) {
+      return;
+    }
+    map.set(item.path, item);
+  });
+  return Array.from(map.values());
+}
+
+async function readWorkbookFromResponse(response, filePath) {
+  const lowerPath = String(filePath || "").toLowerCase();
+  if (lowerPath.endsWith(".csv")) {
+    const text = await response.text();
+    return XLSX.read(text, { type: "string" });
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return XLSX.read(arrayBuffer, { type: "array" });
+}
+
+function getFileBaseName(filePath) {
+  const normalized = String(filePath || "").replace(/\\/g, "/");
+  return normalized.split("/").pop() || filePath;
+}
+
+function setUploadStatus(type, message, isError) {
+  const statusNode = type === "amazon" ? overviewNodes.amazonUploadStatus : overviewNodes.influencerUploadStatus;
+  if (!statusNode) {
+    return;
+  }
+  statusNode.textContent = message;
+  statusNode.style.color = isError ? "#da8f66" : "";
+}
+
+function bindIfPresent(node, eventName, handler) {
+  if (!node) {
+    return;
+  }
+  node.addEventListener(eventName, handler);
+}
+
+function clearFileInputValue(event) {
+  if (!event?.target) {
+    return;
+  }
+  event.target.value = "";
 }
